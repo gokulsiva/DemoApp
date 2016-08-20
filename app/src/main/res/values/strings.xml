@@ -58,6 +58,7 @@
     <string name="Server_Error">Server Error</string>
     <string name="Network_Error">Network Error</string>
     <string name="Parse_Error">Parse Error</string>
+    <string name="title_activity_maps">Map</string>
 
 
 </resources>

@@ -2,20 +2,16 @@ package com.example.admin.demoapp;
 
 import android.app.Activity;
 import android.util.Log;
+import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.NetworkError;
-import com.android.volley.NoConnectionError;
-import com.android.volley.ParseError;
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
-import com.android.volley.ServerError;
-import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.HurlStack;
-import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+
+import org.json.JSONObject;
 
 
 public class GetJson {
@@ -30,48 +26,29 @@ public class GetJson {
         this.context = context;
     }
 
-    public void jsonRequest(final VolleyCallback callback){
+    public void jsonRequest(final VolleyCallback callback) {
 
-        StringRequest stringRequest = new StringRequest(url,
-                new Response.Listener<String>() {
+        JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                (Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(JSONObject response) {
+                        callback.onSuccess(response.toString());
 
-                        json = response;
-                        Log.v("Response : ",response);
-                        callback.onSuccess(json);
                     }
-                },
-                new Response.ErrorListener() {
+                }, new Response.ErrorListener() {
+
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        if (error instanceof TimeoutError || error instanceof NoConnectionError) {
-                            json = context.getString(R.string.Timeout_Error);
-                            callback.onSuccess(json);
-                        } else if (error instanceof AuthFailureError) {
-                            json = context.getString(R.string.Auth_Error);
-                            callback.onSuccess(json);
-                        } else if (error instanceof ServerError) {
-                            json = context.getString(R.string.Server_Error);
-                            callback.onSuccess(json);
-                        } else if (error instanceof NetworkError) {
-                            json = context.getString(R.string.Network_Error);
-                            callback.onSuccess(json);
-                        } else if (error instanceof ParseError) {
-                            json = context.getString(R.string.Parse_Error);
-                            callback.onSuccess(json);
-                        }
+
+                        Toast.makeText(context, error.getMessage(), Toast.LENGTH_LONG).show();
+                        Log.e("Error", error.getMessage());
 
                     }
                 });
+        RequestQueue requestQueue = Volley.newRequestQueue(context);
+        requestQueue.add(jsObjRequest);
 
-        RequestQueue requestQueue = Volley.newRequestQueue(context, new HurlStack());
-        requestQueue.add(stringRequest);
-        stringRequest.setRetryPolicy(new DefaultRetryPolicy(3000,
-                1,
-                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
     }
-
-
 }

@@ -10,7 +10,9 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -23,6 +25,9 @@ import com.google.android.gms.common.api.OptionalPendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 /**
@@ -35,12 +40,15 @@ public class MainActivity extends AppCompatActivity implements
 
 
     public static final String MyPREFERENCES = "MyPrefs" ;
-    public static final String Name = "nameKey";
-    public static final String WhatsApp = "whatsAppKey";
-    public static final String Email = "emailKey";
-    public static final String location = "locationKey";
-    public static final String Lattitude = "lattitudeKey";
-    public static final String Longitude = "LongitudeKey";
+    public static final String NAME_KEY = "nameKey";
+    public static final String LOGGEDIN_KEY = "loggedin";
+    public static final String WHATS_APP_KEY = "whatsAppKey";
+    public static final String EMAIL_KEY = "emailKey";
+    public static final String LOCATION_KEY = "locationKey";
+    public static final String LATTITUDE_KEY = "lattitudeKey";
+    public static final String LONGITUDE_KEY = "longitudeKey";
+    public static final String COURSE_KEY = "courseKey";
+    public static final String ACCOUNT_KEY = "accountKey";
 
     SharedPreferences sharedpreferences;
 
@@ -49,6 +57,12 @@ public class MainActivity extends AppCompatActivity implements
 
     private GoogleApiClient mGoogleApiClient;
     private ProgressDialog mProgressDialog;
+
+
+    EditText emailIdLogin;
+    EditText passwordLogin;
+    Button loginButton;
+    Button signUpButton;
 
     public static boolean fromMain = true;
 
@@ -60,15 +74,23 @@ public class MainActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_main);
 
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        if(sharedpreferences.contains(Email))
+        if(sharedpreferences.contains(LOGGEDIN_KEY))
         {
-            Intent i = new Intent(this,DrawerActivity.class);
-            startActivity(i);
+            Intent intent = new Intent(this,MapsActivity.class);
+            startActivity(intent);
         }
 
-        // Views
+        // EditText and Buttons
 
-        // Button listeners
+        emailIdLogin = (EditText) findViewById(R.id.emailIdLogin);
+        passwordLogin = (EditText) findViewById(R.id.passwordLogin);
+        loginButton = (Button) findViewById(R.id.loginButton);
+        signUpButton = (Button) findViewById(R.id.signUpButton);
+        loginButton.setOnClickListener(this);
+        signUpButton.setOnClickListener(this);
+
+
+        // Google signIn Button listeners
         findViewById(R.id.sign_in_button).setOnClickListener(this);
 
 
@@ -151,9 +173,8 @@ public class MainActivity extends AppCompatActivity implements
             GoogleSignInAccount acct = result.getSignInAccount();
             //mStatusTextView.setText(getString(R.string.signed_in_fmt, acct.getDisplayName()));
             SharedPreferences.Editor editor = sharedpreferences.edit();
-
-            editor.putString(Name, acct.getDisplayName());
-            editor.putString(Email, acct.getEmail());
+            editor.putString(NAME_KEY, acct.getDisplayName());
+            editor.putString(EMAIL_KEY, acct.getEmail());
             editor.commit();
             updateUI(true);
         } else {
@@ -172,9 +193,61 @@ public class MainActivity extends AppCompatActivity implements
     }
     // [END signIn]
 
-    // [START signOut]
+   // [ Start Login]
 
-    // [END revokeAccess]
+    private void logIn(){
+
+        String email = emailIdLogin.getText().toString().trim();
+        String password = passwordLogin.getText().toString().trim();
+
+        if(email.equals("")||password.equals(""))
+        {
+            Toast.makeText(this,"Please provide EmailId and Password",Toast.LENGTH_LONG).show();
+        } else
+        {
+            mProgressDialog = ProgressDialog.show(this,"Signing In.....","Please wait",false,false);
+
+            String url = "http://gokulonlinedatabase.net16.net/jusPayDemo/login/loginDemo.php?email="+email+"&password="+password;
+            GetJson json = new GetJson(this,url);
+            json.jsonRequest(new VolleyCallback() {
+                @Override
+                public void onSuccess(String result) {
+                    mProgressDialog.dismiss();
+                    try {
+                        JSONObject json = new JSONObject(result);
+
+                        if(json.isNull("Result_Array"))
+                        {
+                            Toast.makeText(MainActivity.this,"Invalid Account Credentials",Toast.LENGTH_LONG).show();Toast.makeText(MainActivity.this,"Invalid Account Credentials",Toast.LENGTH_LONG).show();
+                        }else
+                        {
+                            JSONArray array = json.getJSONArray("Result_Array");
+                            JSONObject finalObject = array.getJSONObject(0);
+                             SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.MyPREFERENCES, Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putString(MainActivity.LOGGEDIN_KEY,"true");
+                            editor.putString(MainActivity.EMAIL_KEY,finalObject.getString("email"));
+                            editor.putString(MainActivity.NAME_KEY,finalObject.getString("name"));
+                            editor.putString(MainActivity.LATTITUDE_KEY,finalObject.getString("lattitude"));
+                            editor.putString(MainActivity.LONGITUDE_KEY,finalObject.getString("longitude"));
+                            editor.putString(MainActivity.LOCATION_KEY,finalObject.getString("location"));
+                            editor.putString(MainActivity.WHATS_APP_KEY,finalObject.getString("whatsapp"));
+                            editor.putString(MainActivity.COURSE_KEY,finalObject.getString("knowledge"));
+                            editor.putString(MainActivity.ACCOUNT_KEY,finalObject.getString("account"));
+                            editor.commit();
+                            Intent intent = new Intent(MainActivity.this,MapsActivity.class);
+                            startActivity(intent);
+
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+
+    }
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
@@ -217,14 +290,7 @@ public class MainActivity extends AppCompatActivity implements
                                     // mProgressDialog.dismiss();
                                 }
                             });
-                    EditText email = (EditText) findViewById(R.id.email);
-                    EditText name = (EditText) findViewById(R.id.name);
-                    sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-
-                Intent i = new Intent(this,DetailsActivity.class);
-                    i.putExtra(Name,sharedpreferences.getString(Name,""));
-                    i.putExtra(Email,sharedpreferences.getString(Email,""));
-                startActivity(i);
+                        activityCreator_googleSignIn();
             }
 
         } else {
@@ -235,11 +301,68 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    private void activityCreator_googleSignIn()
+    {
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        String url = "http://gokulonlinedatabase.net16.net/jusPayDemo/login/googleSign.php?email="+sharedpreferences.getString(EMAIL_KEY,"xyz");
+        Log.v("URL",url);
+        GetJson json = new GetJson(this,url);
+        json.jsonRequest(new VolleyCallback() {
+            @Override
+            public void onSuccess(String result) {
+                try {
+                    Log.v("Result",result);
+                    JSONObject json = new JSONObject(result);
+
+                    if(json.isNull("Result_Array"))
+                    {
+                        EditText email = (EditText) findViewById(R.id.email);
+                        EditText name = (EditText) findViewById(R.id.name);
+                        Intent i = new Intent(MainActivity.this,DetailsActivity.class);
+                        i.putExtra(NAME_KEY,sharedpreferences.getString(NAME_KEY,""));
+                        i.putExtra(EMAIL_KEY,sharedpreferences.getString(EMAIL_KEY,""));
+                        startActivity(i);
+                    }else
+                    {
+                        JSONArray array = json.getJSONArray("Result_Array");
+                        JSONObject finalObject = array.getJSONObject(0);
+                        SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.MyPREFERENCES, Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putString(MainActivity.LOGGEDIN_KEY,"true");
+                        editor.putString(MainActivity.EMAIL_KEY,finalObject.getString("email"));
+                        editor.putString(MainActivity.NAME_KEY,finalObject.getString("name"));
+                        editor.putString(MainActivity.LATTITUDE_KEY,finalObject.getString("lattitude"));
+                        editor.putString(MainActivity.LONGITUDE_KEY,finalObject.getString("longitude"));
+                        editor.putString(MainActivity.LOCATION_KEY,finalObject.getString("location"));
+                        editor.putString(MainActivity.WHATS_APP_KEY,finalObject.getString("whatsapp"));
+                        editor.putString(MainActivity.COURSE_KEY,finalObject.getString("knowledge"));
+                        editor.putString(MainActivity.ACCOUNT_KEY,finalObject.getString("account"));
+                        editor.commit();
+                        Intent intent = new Intent(MainActivity.this,MapsActivity.class);
+                        startActivity(intent);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.sign_in_button:
+                //Google SignIn button Action
                 signIn();
+                break;
+            case R.id.loginButton:
+                //loginButton Action
+                logIn();
+                break;
+            case R.id.signUpButton:
+                //signupButton Action
+                Intent i = new Intent(this,DetailsActivity.class);
+                startActivity(i);
                 break;
 
         }
